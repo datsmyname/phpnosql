@@ -1,0 +1,11 @@
+{
+    "require": {
+        "catfan/medoo": "^2.1"
+    },
+    "autoload": {
+        "files": [
+            "phpnosql.php",
+            "phpnosqlstore.php"
+        ]
+    }
+}
