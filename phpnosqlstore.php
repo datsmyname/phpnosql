@@ -2,7 +2,6 @@
 
 namespace NoSQL;
 
-use Exception;
 use Medoo\Medoo;
 
 class Store
@@ -76,38 +75,35 @@ class Store
    */
   public function findAll(string|array $orderBy = null, int $limit = null, int $offset = null): array
   {
-    $datas = [];
-
-    $where = [];
-
-    if (!is_null($orderBy)) {
-      if (is_string($orderBy)) {
-        $where['ORDER'] = $orderBy;
-      } else {
-        foreach ($orderBy as $field => $order) {
-          $where['ORDER'][$field] = $order;
-        }
-      }
-    }
-
-    if (!is_null($limit)) {
-      $where['LIMIT'] = $limit;
-    }
-
-    if (!is_null($offset)) {
-      $where['LIMIT'] = [$offset, $limit !== null ? $limit : -1];
-    }
+    $DATA = [];
 
     $this->db->select(
       $this->table,
       ['@docid'],
-      $where,
-      function ($data) use (&$datas) {
-        $datas[] = $this->findByDocId($data['docid']);
+      function ($data) use (&$DATA) {
+        $DATA[] = $this->findByDocId($data['docid']);
       }
     );
 
-    return $datas;
+    if (!is_null($orderBy)) {
+      if (is_string($orderBy)) {
+        nosort($DATA, $orderBy);
+      } else {
+        foreach ($orderBy as $field => $order) {
+          nosort($DATA, $field, $order);
+        }
+      }
+    }
+
+    if (!is_null($offset)) {
+      return array_slice($DATA, $offset, $limit);
+    }
+
+    if (!is_null($limit)) {
+      return array_slice($DATA, 0, $limit);
+    }
+
+    return $DATA;
   }
 
   public function findByDocId(int $docId): array|null
@@ -157,13 +153,33 @@ class Store
     try {
       $this->db->delete($this->table, ['docid' => $docId]);
       return $docId;
-    } catch (Exception $e) {
+    } catch (\Exception $e) {
     }
     return false;
   }
 }
 
-function field_encode($value)
+function nosort(array &$array, $field, string $order = 'asc'): bool
+{
+  $order = strtolower($order);
+
+  if ($order == 'asc') {
+    usort($array, function ($a, $b) use ($field) {
+      return @$a[$field] <=> @$b[$field];
+    });
+    return true;
+  }
+
+  if ($order == 'desc') {
+    usort($array, function ($a, $b) use ($field) {
+      return @$b[$field] <=> @$a[$field];
+    });
+  }
+
+  return true;
+}
+
+function field_encode($value): array
 {
   $type = gettype($value);
   if ($value == 'array' || $value == 'object') $value = json_encode($value);
@@ -173,7 +189,7 @@ function field_encode($value)
   return [$type, $value];
 }
 
-function field_decode($type, $value)
+function field_decode(string $type, $value): mixed
 {
   if ($type == 'integer') return intval($value);
   if ($type == 'boolean') return boolval($value);

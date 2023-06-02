@@ -1,6 +1,5 @@
 <?php
 use Medoo\Medoo;
-use NoSQL\NoSQL;
 
 $db = new Medoo([
   'type' => 'sqlite',
@@ -8,5 +7,3 @@ $db = new Medoo([
 ]);
 
 $db->query('PRAGMA journal_mode = memory;');
-
-$nosql = new NoSQL($db);
